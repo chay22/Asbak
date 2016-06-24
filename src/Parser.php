@@ -48,18 +48,3 @@ class Parser
 		return call_user_func_array($method, $args);
 	}
 }
-
-
-
-
-$asbak = new Asbak();
-$asbak->js()
-
-
-var_dump($asbak);
-Asbak::config(['host' => 'google'])
-     ->js('./asdasdas/jQuery/1.2.3/jQuery.min.js',['name'=>'jQuery','version'=>'1.2.3','host'=>'google']);
-     
-Asbak::load([
-    'abcd/asdads/asdasd/asdas.js'
-])
