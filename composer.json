@@ -1,5 +1,5 @@
 {
-    "name": "Chay22/Asbak",
+    "name": "chay22/asbak",
     "homepage": "https://enchay.ru",
     "description": "Automatically load assets from CDN from local file and perform a fallback.",
     "keywords": ["assets", "javascript", "css", "cdn", "helper"],
