@@ -237,3 +237,16 @@ EOF;
 		return $asbak;
 	}
 }
+
+?>
+<!DOCTYPE html>
+<html>
+<head><title>asd</title></head><body>
+
+<?php
+$asbak = new Asbak();
+$js = $asbak->js('assets/jquery/1.2.3/jquery.min.js');
+
+echo $js;
+?>
+</body></html>

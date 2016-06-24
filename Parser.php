@@ -2,28 +2,27 @@
 
 namespace Chay22\Asbak;
 
-class AssetsParser
+class Parser
 {
-	public static function getName($file)
+	public function getName($file)
 	{
 		$filename = basename($file);
 		$ext = self::getExtension($file);
+		$name = explode('.' . $ext, $filename);
 
 		if (stripos($filename, '.min.')) {
 			$name = explode('.min.', $filename);
-		} else {
-			$name = explode('.' . $ext, $filename);
 		}
 
 		return $name[0];
 	}
 
-	public static function getVersion($file)
+	public function getVersion($file)
 	{
 		return preg_match('/\d+(?:\.\d+)+/', $file, $matches)[0];
 	}
 
-	public static function getIdentifier($file)
+	public function getIdentifier($file)
 	{
 		$ext = self::getExtension($file);
 
@@ -34,8 +33,18 @@ class AssetsParser
 		return new Assets . ucwords($ext);
 	}
 
-	public static function getExtension($file)
+	public function getExtension($file)
 	{
 		return pathinfo($file, PATHINFO_EXTENSION);
+	}
+
+	public function getHost($file)
+	{
+		return $this->host;
+	}
+
+	public function __callStatic($method, $args)
+	{
+		return call_user_func_array($method, $args);
 	}
 }
