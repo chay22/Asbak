@@ -1,6 +1,6 @@
 <?php 
 
-namespace Chay22\Asbak;
+namespace Chay22\Asbak\Contract;
 
 use Chay22\Asbak\Asbak;
 
