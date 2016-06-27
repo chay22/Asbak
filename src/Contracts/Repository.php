@@ -4,7 +4,7 @@ namespace Chay22\Asbak\Contract;
 
 use Chay22\Asbak\Asbak;
 
-interface Registry
+interface Repository
 {
 
 	public function __construct(Asbak $asbak);
