@@ -2,9 +2,9 @@
 
 namespace Chay22\Asbak;
 
-use Chay22\Asbak\Registry\CDN;
-use Chay22\Asbak\Registry\Identifier;
-use Chay22\Asbak\Contract\Registry;
+use Chay22\Asbak\Repositories\CDN;
+use Chay22\Asbak\Repositories\Identifier;
+use Chay22\Asbak\Contract\Repository;
 
 class Asbak
 {
@@ -79,11 +79,11 @@ class Asbak
 	protected $debug;
 
 	/**
-	 * Bootstrap registry classes.
+	 * Bootstrap repositoy classes.
 	 * 
 	 * @var array
 	 */
-	protected $registry = [
+	protected $repo = [
 		CDN::class,
 		Identifier::class,
 	];
@@ -95,7 +95,7 @@ class Asbak
 	 */
 	public function __construct($debug)
 	{
-		$this->registerRegistry();
+		$this->registerRepository();
 
 		$this->debug = $debug + 0;
 	}
@@ -190,7 +190,7 @@ class Asbak
 	 * detection would be omitted and use its CDN instead. And it's
 	 * better since detection may fail in any cases.
 	 * 
-	 * @param  string  $cdn  URL of CDN file|CDN key from \Registry class
+	 * @param  string  $cdn  URL of CDN file|CDN key from \Repository class
 	 * 
 	 * @return class \Chay22\Asbak\Asbak
 	 */
@@ -294,13 +294,13 @@ class Asbak
 	 */
 	protected function script($data)
 	{	
-		$url = $this->getRegistry('cdn', $data['cdn']);
+		$url = $this->repository('cdn', $data['cdn']);
 
 		if (! is_null($url)) {
-			$url = $this->extractRegistry('cdn', $data);
+			$url = $this->extractRepository('cdn', $data);
 		} else {
-			$url = $this->getRegistry('cdn', $this->getDefaultRegistry('cdn'));
-			$url = $this->extractRegistry('cdn', $data);
+			$url = $this->repository('cdn', $this->getDefaultRepository('cdn'));
+			$url = $this->extractRepository('cdn', $data);
 		}
 
 		return '<script type="text/javascript" src="'.$url.'"></script>'.PHP_EOL;
@@ -374,14 +374,14 @@ class Asbak
 	 */
 	protected function getIdentifier($file)
 	{
-		$identifier = $this->getRegistry(
+		$identifier = $this->repository(
 			'identifier', $this->getLibraryName($file)
 		);
 		
 		if (! is_null($identifier)) {
 			return $identifier;
 		} else {
-			return $this->getRegistry(
+			return $this->repository(
 				'identifier', $this->getName($file)
 			);
 		}
@@ -405,7 +405,7 @@ class Asbak
 	}
 
 	/**
-	 * Get CDN from \Registry class
+	 * Get CDN from \Repository class
 	 * 
 	 * @param  string  $cdn  CDN key
 	 * 
@@ -413,11 +413,11 @@ class Asbak
 	 */
 	protected function getCdn($cdn = null)
 	{
-		if (! is_null($cdn) && ! is_null($this->getRegistry('cdn', $cdn))) {
+		if (! is_null($cdn) && ! is_null($this->repository('cdn', $cdn))) {
 			return $cdn;
 		}
 
-		return $this->getDefaultRegistry('cdn');
+		return $this->getDefaultRepository('cdn');
 	}
 
 	/**
@@ -466,63 +466,72 @@ class Asbak
 	}
 
 	/**
-	 * Get data from \Registry class
+	 * Get data from \Repository class
 	 * 
-	 * @param  string  $registry  Registry key name
-	 * @param  string  $list      Data key of value to retrieve
+	 * @param  string  $repo 	 Repository key name
+	 * @param  string  $list     Data key of value to retrieve
 	 * 
 	 * @return string
 	 */
-	private function getRegistry($registry, $list = null)
+	private function getRepository($repo, $list = null)
 	{
-		return $this->registry->{$registry}->get($list);
+		return $this->repo->{$repo}->get($list);
+	}
+
+	/**
+	 * 
+	 * @see getRepository()
+	 */
+	private function repository($repo, $list = null)
+	{
+		return $this->getRepository($repo, $list);
 	}
 
 	/**
 	 * Perform data extraction to related assets
 	 * 
-	 * @param  string  $registry  Registry key name
-	 * @param  array  $data       Data to match/extract to
+	 * @param  string  $repo  	Repository key name
+	 * @param  array   $data    Data to match/extract to
 	 * 
 	 * @return array
 	 */
-	private function extractRegistry($registry, $data)
+	private function extractRepository($repo, $data)
 	{
-		return $this->registry->{$registry}->extract($data);
+		return $this->repo->{$repo}->extract($data);
 	}
 
 	/**
-	 * Get default registry data
+	 * Get default selected repository data
 	 * 
-	 * @param  string  $registry  Registry key name
+	 * @param  string  $repo  Repository key name
 	 * 
 	 * @return  string
 	 */
-	private function getDefaultRegistry($registry)
+	private function getDefaultRepository($repo)
 	{
-		return $this->registry->{$registry}->getDefault();
+		return $this->repo->{$repo}->getDefault();
 	}
 
 	/**
-	 * Dispatch registered \Registry classes
+	 * Dispatch registered \Repository classes
 	 * 
 	 * @return collection
 	 */
-	private function registerRegistry()
+	private function registerRepository()
 	{
-		$registries = $this->registry;
+		$repositories = $this->repo;
 
-		foreach ($registries as $registry) {
-			$instance = new $registry($this);
-			if (! $instance instanceof Registry) {
-				throw new \Exception("Registry must be an instance of ".Registry::class.", {$registry} given");
+		foreach ($repositories as $repo) {
+			$instance = new $repo($this);
+			if (! $instance instanceof Repository) {
+				throw new \Exception("Class must be an instance of ".Repository::class.", {$repo} given");
 			}
-			$key = strtolower(substr(strrchr($registry, '\\'), 1));
-			$newRegistry[$key] = $instance;
-			unset($registries);
+			$key = strtolower(substr(strrchr($repo, '\\'), 1));
+			$newRepo[$key] = $instance;
+			unset($repositories);
 		}
 
-		$this->registry = (object) $newRegistry;
+		$this->repo = (object) $newRepo;
 	}
 
 
