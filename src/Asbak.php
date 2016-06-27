@@ -9,7 +9,7 @@ use Chay22\Asbak\Contract\Registry;
 class Asbak
 {
 	/**
-	 * Path to local assets.
+	 * Local assets file path.
 	 * 
 	 * @var string
 	 */
@@ -51,21 +51,11 @@ class Asbak
 	protected $cdn;
 
 	/**
-	 * Turn CDN into minified version or no.
+	 * Turn CDN into minified version.
 	 * 
 	 * @var boolean
 	 */
 	protected $minified;
-
-	/**
-	 * Bootstrap registry classes.
-	 * 
-	 * @var array
-	 */
-	protected $registry = [
-		CDN::class,
-		Identifier::class,
-	];
 
 	/**
 	 * Store current script of CDN.
@@ -82,13 +72,32 @@ class Asbak
 	protected static $fallback;
 
 	/**
+	 * Set debug parameter
+	 * 
+	 * @var int
+	 */
+	protected $debug;
+
+	/**
+	 * Bootstrap registry classes.
+	 * 
+	 * @var array
+	 */
+	protected $registry = [
+		CDN::class,
+		Identifier::class,
+	];
+
+	/**
 	 * Begin initiation.
 	 * 
 	 * @return void
 	 */
-	public function __construct()
+	public function __construct($debug)
 	{
 		$this->registerRegistry();
+
+		$this->debug = $debug + 0;
 	}
 
 	/**
@@ -308,6 +317,16 @@ class Asbak
 	{
 		$fallback = $data['fallback'];
 		$identifier = $data['identifier'];
+		$library = $data['library'];
+
+		if ($this->debug == 1) {
+			return "<script>if ({$identifier}) { console.log('{$library} loaded successfully from CDN') } ".
+				   "else { console.log('{$library} is NOT loaded from CDN!'); ".
+				   "document.write('<script type=\"text/javascript\" src=\"{$fallback}\"><\\/script>'); " . 
+				   "document.write('<script>if ({$identifier}) { console.log(\'{$library} has loaded now\') } ".
+				   "else {console.log(\'Error: {$library} has failed to load!\'); }<\/script> ');}</script>";
+
+		}
 
 		return "<script>{$identifier} || document.write('<script type=\"text/javascript\" src=\"{$fallback}\"><\\/script>')</script>".PHP_EOL;
 	}
@@ -511,7 +530,7 @@ class Asbak
 /////////////////CONTINUED
 
 
-	public static function loads(array $files)
+	public static function load(array $files)
 	{
 		foreach ($files as $file) {
 			$modifiedFile[] = [
@@ -523,10 +542,10 @@ class Asbak
 			];
 		}
 
-		return (new Asbak)->render(new AssetsBuilder($modifiedFile));
+		//return (new Asbak)->render(new AssetsBuilder($modifiedFile));
 	}
 
-	protected function renders(AssetsBuilder $builder)
+	protected function renderAsync($builder)
 	{
 		echo '<script>';
 		echo self::internalScript();
@@ -540,7 +559,7 @@ class Asbak
 		echo '</script>';
 	}
 
-	protected static function internalScripts()
+	protected static function asyncScript()
 	{
 		$asbak = <<<EOF
 			var Asbak = Asbak || (function(){
