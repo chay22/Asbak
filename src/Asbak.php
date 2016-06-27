@@ -479,7 +479,6 @@ class Asbak
 	}
 
 	/**
-	 * 
 	 * @see getRepository()
 	 */
 	private function repository($repo, $list = null)
