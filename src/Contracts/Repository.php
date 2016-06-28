@@ -1,13 +1,11 @@
 <?php 
 
-namespace Chay22\Asbak\Contract;
-
-use Chay22\Asbak\Asbak;
+namespace Chay22\Asbak\Contracts;
 
 interface Repository
 {
 
-	public function __construct(Asbak $asbak);
+	public function __construct();
 
 	public function get($key);
 }

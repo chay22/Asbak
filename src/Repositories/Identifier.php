@@ -1,11 +1,11 @@
 <?php 
 
-namespace Chay22\Asbak\Registry;
+namespace Chay22\Asbak\Repositories;
 
-use Chay22\Asbak\Contract\Registry;
+use Chay22\Asbak\Contracts\Repository;
 use Chay22\Asbak\Asbak;
 
-class Identifier implements Registry
+class Identifier implements Repository
 {
 	const _DEFAULT_ = 'google';
 
@@ -58,10 +58,7 @@ class Identifier implements Registry
 
 	protected $asbak;
 
-	public function __construct(Asbak $asbak)
-	{
-		$this->asbak = $asbak;
-	}
+	public function __construct() {}
 
 	public function get($key = null)
 	{

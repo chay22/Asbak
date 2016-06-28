@@ -5,6 +5,8 @@ namespace Chay22\Asbak;
 use Chay22\Asbak\Repositories\CDN;
 use Chay22\Asbak\Repositories\Identifier;
 use Chay22\Asbak\Contract\Repository;
+use Chay22\Asbak\Services\AssetsParser as Parser;
+use Chay22\Asbak\Services\RepositoryRegistry as Registry;
 
 class Asbak
 {
@@ -14,48 +16,6 @@ class Asbak
 	 * @var string
 	 */
 	protected $file;
-
-	/**
-	 * Asset's file name.
-	 * 
-	 * @var string
-	 */
-	protected $name;
-
-	/**
-	 * Asset's library name.
-	 * 
-	 * @var string
-	 */
-	protected $library;
-
-	/**
-	 * Asset's version.
-	 * 
-	 * @var string
-	 */
-	protected $version;
-
-	/**
-	 * Type of file.
-	 * 
-	 * @var string  js|css
-	 */
-	protected $extension;
-
-	/**
-	 * Alias name of CDN or it's full URL.
-	 * 
-	 * @var string
-	 */
-	protected $cdn;
-
-	/**
-	 * Turn CDN into minified version.
-	 * 
-	 * @var boolean
-	 */
-	protected $minified;
 
 	/**
 	 * Store current script of CDN.
@@ -88,16 +48,22 @@ class Asbak
 		Identifier::class,
 	];
 
+	protected $parse;
+	protected $registry;
+
 	/**
 	 * Begin initiation.
 	 * 
 	 * @return void
 	 */
-	public function __construct($debug)
+	public function __construct(array $config = null)
 	{
-		$this->registerRepository();
+		$this->repository = new Registry();
 
-		$this->debug = $debug + 0;
+		$this->parse = new Parser($this);
+
+		$this->debug = isset($config['debug'])
+					 ? $config['debug'] + 0 : 0;
 	}
 
 	/**
@@ -110,19 +76,9 @@ class Asbak
 	public function js($file)
 	{
 		$this->file = $file;
-		
-		$this->name = null;
-		
-		$this->library = null;
-		
-		$this->version = null;
-		
-		$this->extension = null;
-		
-		$this->cdn = null;
-		
-		$this->minified = null;
-		
+
+		$this->parse->js($file);
+
 		return $this;
 	}
 
@@ -133,10 +89,10 @@ class Asbak
 	 * 
 	 * @return class \Chay22\Asbak\Asbak
 	 */
-	public function name($name)
+	public function name($filename)
 	{
-		$this->name = $name;
-		
+		$this->parse->name($filename);
+
 		return $this;
 	}
 
@@ -149,7 +105,7 @@ class Asbak
 	 */
 	public function library($name)
 	{
-		$this->library = $name;
+		$this->parse->library($name);
 
 		return $this;
 	}
@@ -164,9 +120,9 @@ class Asbak
 	 * 
 	 * @return class \Chay22\Asbak\Asbak
 	 */
-	public function version($version)
+	public function version($file)
 	{
-		$this->version = $version;
+		$this->parse->version($file);
 
 		return $this;
 	}
@@ -178,9 +134,9 @@ class Asbak
 	 * 
 	 * @return class \Chay22\Asbak\Asbak
 	 */
-	public function extension($extension)
+	public function extension($file)
 	{
-		$this->extension = $extension;
+		$this->parse->extension($file);
 
 		return $this;
 	}
@@ -194,12 +150,14 @@ class Asbak
 	 * 
 	 * @return class \Chay22\Asbak\Asbak
 	 */
-	public function cdn($cdn)
+	public function cdn($file)
 	{
-		$this->cdn = $this->isUrl($cdn) ? $cdn : $this->getCdn($cdn);
+		$this->isUrl($file)
+			  ? $this->parse->cdn($file)
+			  : $this->repository->getCdn($file);
 
 		return $this;
-	}
+		}
 
 	/**
 	 * Whether set CDN file to be minified or no.
@@ -209,13 +167,9 @@ class Asbak
 	 * @return class \Chay22\Asbak\Asbak
 	 * @throws \Exception
 	 */
-	public function min($minified = true)
+	public function min($minify = true)
 	{
-		if (!is_bool($minified)) {
-			throw new \Exception("$minified must be a type of boolean");
-		}
-
-		$this->minified = $minified;
+		$this->parse->min($minify);
 
 		return $this;
 	}
@@ -239,50 +193,51 @@ class Asbak
 	}
 
 	/**
-	 * Wrap up all data to HTML ready assets
+	 * Re-validate all null data value
+	 * 
+	 * @return array
+	 */
+	public function data()
+	{
+		$file = $this->file;
+		$data = $this->parse->get();
+
+		foreach ($data as $key => $val) {
+			if (is_null($data[$key])) {
+				if (method_exists($this->repository, 'get'.ucfirst($key))) {
+					$data[$key] = $this->repository
+									   ->{'get'.ucfirst($key)}($file);
+				}
+			}
+		}
+
+		$data['min'] = $this->isMinified($data['min']);
+		$data['fallback'] = $file;
+
+		return $data;
+	}
+
+	/**
+	 * Wrap existing data to HTML
 	 * 
 	 * @return string
 	 */
-	public function wrap()
+	protected function wrap()
 	{
-		$fallback = $this->file;
+		$data = $this->data();
 
-		$name = isset($this->name)
-			  ? $this->name : $this->getName($fallback);
+		if ($this->debug == 3) {
+			echo '<pre style="background-color:#1d1d1d !important;' .
+				  'color:#fafafa !important;padding:2em 1em !important;' .
+			 	  'border: .4em solid #212121 !important;margin: 0 -1em !important;'.
+			 	  'font-size: .95em !important;position:absolute !important;'.
+			 	  'width:100% !important;top:0 !important;">';
+			var_export($data);
+			echo '</pre>';
+		}
 
-		$library = isset($this->library)
-			  ? $this->library : $this->getLibraryName($fallback);
-		
-		$version = isset($this->version)
-				 ? $this->version : $this->getVersion($fallback);
-		
-		$extension = isset($this->extension)
-				   ? $this->extension : $this->getExtension($fallback);
-		
-		$cdn = isset($this->cdn) && !empty($this->cdn)
-			  ? $this->cdn : $this->getCdn();
-
-		$minified = $this->isMinified($fallback);
-
-		$identifier = $this->getIdentifier($fallback);
-
-		$data = [
-		  	'name' => $name,
-		  	'library' => $library,
-		  	'version' => $version,
-		  	'extension' => $extension,
-		  	'identifier' => $identifier,
-		  	'cdn' => $cdn,
-		  	'fallback' => $fallback,
-		  	'min' => $minified,
-		];
-
-		array_walk($data, function(&$value, $key) {
-			if ($key != 'version' && $key != 'identifier' && $key != 'name')
-				 $value = strtolower($value);
-		});
-
-		return $this->script($data) . $this->fallback($data);
+		return $this->script($data) .
+			   $this->fallback($data);
 	}
 
 	/**
@@ -294,13 +249,14 @@ class Asbak
 	 */
 	protected function script($data)
 	{	
-		$url = $this->repository('cdn', $data['cdn']);
-
+		$url = $this->repository('cdn')->get($data['cdn']);
+		
 		if (! is_null($url)) {
-			$url = $this->extractRepository('cdn', $data);
+			$url = $this->repository('cdn')->extract($data);
 		} else {
-			$url = $this->repository('cdn', $this->getDefaultRepository('cdn'));
-			$url = $this->extractRepository('cdn', $data);
+			$default = $this->repository('cdn')->getDefault();
+			$url = $this->repository('cdn')->get($default);
+			$url = $this->repository('cdn')->extract($data);
 		}
 
 		return '<script type="text/javascript" src="'.$url.'"></script>'.PHP_EOL;
@@ -331,94 +287,6 @@ class Asbak
 		return "<script>{$identifier} || document.write('<script type=\"text/javascript\" src=\"{$fallback}\"><\\/script>')</script>".PHP_EOL;
 	}
 
-	/**
-	 * Get file name from local file and its path
-	 * 
-	 * @param  string  $file  File and its path
-	 * 
-	 * @return string
-	 */
-	protected function getName($file)
-	{
-		$filename = basename($file);
-		$ext = self::getExtension($file);
-		$name = explode('.' . $ext, $filename);
-
-		if (stripos($filename, '.min.')) {
-			$name = explode('.min.', $filename);
-		}
-
-		return $name[0];
-	}
-
-	/**
-	 * Get version from local file and its path
-	 * 
-	 * @param  string  $file  File and its path
-	 * 
-	 * @return string
-	 */
-	protected function getVersion($file)
-	{
-		preg_match('/\d+(?:\.\d+)+/', $file, $matches);
-		return $matches[0];
-	}
-
-	/**
-	 * Get fallback identifier from file and its path
-	 * 
-	 * @param  string  $file  File and its path
-	 * 
-	 * @return string
-	 * @throws \Exception
-	 */
-	protected function getIdentifier($file)
-	{
-		$identifier = $this->repository(
-			'identifier', $this->getLibraryName($file)
-		);
-		
-		if (! is_null($identifier)) {
-			return $identifier;
-		} else {
-			return $this->repository(
-				'identifier', $this->getName($file)
-			);
-		}
-
-		throw new \Exception(
-			"Could not find matches identifier from {$file}. ".
-			"Please define it manually with identifier() method."
-		);
-	}
-
-	/**
-	 * Get file extension from file and its path
-	 * 
-	 * @param  string  $file  File and its path
-	 * 
-	 * @return string
-	 */
-	protected function getExtension($file)
-	{
-		return pathinfo($file, PATHINFO_EXTENSION);
-	}
-
-	/**
-	 * Get CDN from \Repository class
-	 * 
-	 * @param  string  $cdn  CDN key
-	 * 
-	 * @return  string
-	 */
-	protected function getCdn($cdn = null)
-	{
-		if (! is_null($cdn) && ! is_null($this->repository('cdn', $cdn))) {
-			return $cdn;
-		}
-
-		return $this->getDefaultRepository('cdn');
-	}
 
 	/**
 	 * Check if current local file is minified
@@ -427,14 +295,22 @@ class Asbak
 	 * 
 	 * @return string
 	 */
-	protected function isMinified($file)
+	public function isMinified($data)
 	{
-		$min = $this->minified;
-		if (isset($min) && is_bool($min)) {
+		$min = $data['min'];
+		$file = basename($this->file);
+		if (is_bool($min)) {
 			return $min ? '.min' : '';
 		}
 
-		return stripos(basename($file), '.min') !== false ? '.min' : '';
+		$pos = stripos($file, 'min');
+		if ($pos !== false) {
+			$min = substr($file, 0, $pos);
+			$sep = substr($min, -1, 1);
+			if ($sep === '.' || $sep === '-') {
+				return "{$sep}min";
+			}		
+		}
 	}
 
 	/**
@@ -454,103 +330,41 @@ class Asbak
 	}
 
 	/**
-	 * Get library name from local file
-	 * 
-	 * @param  string  $file  Current local file
-	 * 
-	 * @return  string
+	 * Return specific repository instances
+	 *
+	 * @param  string  $repo 	Repository key name
+	 *
+	 * @return classes implement \Chay22\Asbak\Contracts\Repository
 	 */
-	protected function getLibraryName($file)
+	protected function repository($repo)
 	{
-		return array_slice(explode('/', $file), -3, 1)[0];
+		return $this->repository->{$repo};
 	}
+
 
 	/**
-	 * Get data from \Repository class
+	 * Set default CDN
 	 * 
-	 * @param  string  $repo 	 Repository key name
-	 * @param  string  $list     Data key of value to retrieve
+	 * @param  string  $value  CDN key to set as default
 	 * 
-	 * @return string
+	 * @return void
 	 */
-	private function getRepository($repo, $list = null)
+	public function setDefaultCdn($value)
 	{
-		return $this->repo->{$repo}->get($list);
+		$this->repository('cdn')->setDefaultCdn($value);
 	}
-
-	/**
-	 * @see getRepository()
-	 */
-	private function repository($repo, $list = null)
-	{
-		return $this->getRepository($repo, $list);
-	}
-
-	/**
-	 * Perform data extraction to related assets
-	 * 
-	 * @param  string  $repo  	Repository key name
-	 * @param  array   $data    Data to match/extract to
-	 * 
-	 * @return array
-	 */
-	private function extractRepository($repo, $data)
-	{
-		return $this->repo->{$repo}->extract($data);
-	}
-
-	/**
-	 * Get default selected repository data
-	 * 
-	 * @param  string  $repo  Repository key name
-	 * 
-	 * @return  string
-	 */
-	private function getDefaultRepository($repo)
-	{
-		return $this->repo->{$repo}->getDefault();
-	}
-
-	/**
-	 * Dispatch registered \Repository classes
-	 * 
-	 * @return collection
-	 */
-	private function registerRepository()
-	{
-		$repositories = $this->repo;
-
-		foreach ($repositories as $repo) {
-			$instance = new $repo($this);
-			if (! $instance instanceof Repository) {
-				throw new \Exception("Class must be an instance of ".Repository::class.", {$repo} given");
-			}
-			$key = strtolower(substr(strrchr($repo, '\\'), 1));
-			$newRepo[$key] = $instance;
-			unset($repositories);
-		}
-
-		$this->repo = (object) $newRepo;
-	}
-
-
-
 /////////////////CONTINUED
 
 
-	public static function load(array $files)
+	public static function load(array $files, $config = null)
 	{
-		foreach ($files as $file) {
-			$modifiedFile[] = [
-				'name' => self::getName($file),
-				'version' => self::getVersion($file),
-				'extension' => self::getExtension($file),
-				'cdn' => self::getcdn($file),
-				'fallback' => self::getFallback($file),
-			];
-		}
+		$assets = new Asbak($config);
 
-		//return (new Asbak)->render(new AssetsBuilder($modifiedFile));
+		foreach ($files as $file) {
+			if (pathinfo($file, PATHINFO_EXTENSION) == 'js') {
+				$assets->js($file)->get();
+			}
+		}
 	}
 
 	protected function renderAsync($builder)
