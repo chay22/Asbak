@@ -23,47 +23,6 @@ class AssetsParser
 	 */
 	protected $file;
 
-	/**
-	 * Asset's file name.
-	 * 
-	 * @var string
-	 */
-	protected $name;
-
-	/**
-	 * Asset's library name.
-	 * 
-	 * @var string
-	 */
-	protected $library;
-
-	/**
-	 * Asset's version.
-	 * 
-	 * @var string
-	 */
-	protected $version;
-
-	/**
-	 * Type of file.
-	 * 
-	 * @var string  js|css
-	 */
-	protected $extension;
-
-	/**
-	 * Alias name of CDN or it's full URL.
-	 * 
-	 * @var string
-	 */
-	protected $cdn;
-
-	/**
-	 * Turn CDN into minified version.
-	 * 
-	 * @var boolean
-	 */
-	protected $minified;
 	
 	private $data = [
 	  	'name' => null,
@@ -93,6 +52,27 @@ class AssetsParser
 	 */
 	public function js($file)
 	{
+		if (is_array($file)) {
+			foreach ($file as $key => $val) {
+				if (! array_key_exists($key, $this->data)) {
+					throw new \Chay22\Asbak\Exceptions\NotFoundException(
+						"Parameter '{$key}' doesn't exists."
+					);
+				}
+				call_user_func([$this, $key], $val);
+			}
+
+			if (! array_key_exists('fallback', $file)) {
+				throw new \Chay22\Asbak\Exceptions\NotFoundException(
+					"Parameter 'fallback' needs to be exists."
+				);
+			}
+
+			$this->file = $file['fallback'];
+
+			return $this->assets;
+		}
+
 		$this->file = $file;
 		
 		foreach ($this->data as $key => $data) {
@@ -198,9 +178,38 @@ class AssetsParser
 		return $this->assets;
 	}
 
+	/**
+	 * Explicitly set a fallback if array given on js() method
+	 * 
+	 * @param  string  $file    Path to local file
+	 * 
+	 * @return void
+	 */
+	private function fallback($file)
+	{
+		$this->data['fallback'] = $file;
+	}
+
+	/**
+	 * Get all data
+	 * 
+	 * @return array
+	 */
 	public function get()
 	{
 		return $this->data;
+	}
+
+	/**
+	 * Autoload $data
+	 */
+	public function __get($key)
+	{
+		if (array_key_exists($key, $this->data)) {
+		    return $this->data[$key];
+		}
+
+		throw new \Chay22\Asbak\Exceptions\NotFoundException("{$key} not found");
 	}
 
 }

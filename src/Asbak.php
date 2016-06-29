@@ -77,7 +77,11 @@ class Asbak
 	{
 		$this->file = $file;
 
-		$this->parse->js($file);
+		$parsedFiles = $this->parse->js($file);
+
+		if (is_array($file)) {
+			$this->file = $this->parse->fallback;
+		}
 
 		return $this;
 	}
