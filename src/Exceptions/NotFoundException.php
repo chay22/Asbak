@@ -9,4 +9,7 @@
  */
 namespace Chay22\Asbak\Exceptions;
 
-class NotFoundException extends AsbakException {}
+class NotFoundException extends AsbakException
+{
+    //
+}
