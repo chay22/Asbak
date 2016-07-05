@@ -67,7 +67,7 @@ class Identifier implements Provider
     /**
      * Get predefined identifier value from library name
      * @param  null|string $key null|Library name
-     * @return string|array|null Assets identifier
+     * @return mixed            Assets identifier
      */
     public function get($key = null)
     {

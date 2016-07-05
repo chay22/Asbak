@@ -38,7 +38,7 @@ class CDN implements Provider
     /**
      * Get predefined CDN value
      * @param  null|string $key null|CDN key
-     * @return string|array|null CDN URL
+     * @return mixed            CDN URL
      */
     public function get($key = null)
     {
