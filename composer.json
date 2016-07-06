@@ -1,7 +1,7 @@
 {
     "name": "chay22/asbak",
     "homepage": "https://enchay.ru",
-    "description": "Automatically load assets from CDN from local file and perform a fallback.",
+    "description": "Build assets from CDN and perform a fallback, automagically.",
     "keywords": ["assets", "javascript", "css", "cdn", "helper"],
     "license": "MIT",
     "type": "library",
