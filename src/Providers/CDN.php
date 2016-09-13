@@ -28,7 +28,7 @@ class CDN implements Provider
     'google'        =>  'https://ajax.googleapis.com/ajax/libs/%library/%version/%name',
     'jquery'        =>  'https://code.jquery.com/%name-%version.js',
     'jsdelivr'      =>  'https://cdn.jsdelivr.net/%name/%version/%name',
-    'npmcdn'        =>  'https://npmcdn.com/%name@%version/dist/%name.js',
+    'unpkg'        =>  'https://unpkg.com/%name@%version/dist/%name.js',
     'sina'          =>  'https://lib.sinaapp.com/%type/%library/%version/%name',
     'sinaapp'       =>  'https://lib.sinaapp.com/%type/%library/%version/%name',
     'useso'         =>  'http://ajax.useso.com/ajax/libs/%library/%version/%name',
